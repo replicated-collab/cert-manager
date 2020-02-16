@@ -1,0 +1,18 @@
+name: Create release
+
+on: [push]
+
+jobs:
+  create-release:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v1
+    - uses: replicatedhq/action-kots-release@v0.2.0
+      name: Create the Release
+      with:
+        replicated-api-token: ${{ secrets.REPLICATED_API_TOKEN }}
+        replicated-app: ${{ secrets.REPLICATED_APP }}
+
+
