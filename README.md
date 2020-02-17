@@ -1,79 +1,26 @@
-Replicated Kubernetes Starter
+Cert-Manager + LetsEncrypt
 ==================
 
-Example project showcasing how power users can leverage the Replicated CLI Tools to manage kots YAMLs using a git repository.
+Example project showcasing a solution to use cert-manager and LetsEncrypt to automatically generate certificates for an NGINX ingress. h
 
-### Get started
-
-This repo is a [GitHub Template Repository](https://help.github.com/en/articles/creating-a-repository-from-a-template). You can create a private copy by using the "Use this Template" link in the repo:
-
-![Template Repo](https://help.github.com/assets/images/help/repository/use-this-template-button.png)
-
-You should use the template to create a new **private** repo in your org, for example `mycompany/kots-app` or `mycompany/replicated-starter-kots`.
-
-Once you've created a repository from the template, you'll want to `git clone` your new repo and `cd` into it locally.
-
-#### Configure environment
-
-You'll need to set up two environment variables to interact with vendor.replicated.com:
-
-```
-export REPLICATED_APP=...
-export REPLICATED_API_TOKEN=...
-```
-
-`REPLICATED_APP` should be set to the app slug from the Settings page:
-
-<p align="center"><img src="./doc/REPLICATED_APP.png" width=600></img></p>
-
-Next, create an API token from the [Teams and Tokens](https://vendor.replicated.com/team/tokens) page:
-
-<p align="center"><img src="./doc/REPLICATED_API_TOKEN.png" width=600></img></p>
-
-Ensure the token has "Write" access or you'll be unable create new releases. Once you have the values,
-set them in your environment.
-
-```
-export REPLICATED_APP=...
-export REPLICATED_API_TOKEN=...
-```
-
-You can ensure this is working with
-
-```
-make list-releases
-```
-
-#### Iterating on your release
-
-Once you've made changes to `replicated.yaml`, you can push a new release to a channel with
-
-```
-make release
-```
-
-By default the `Unstable` channel will be used. You can override this with `channel`:
-
-```
-make release channel=Beta
-```
-
-### Integrating with CI
-
-This repo contains a [GitHub Actions](https://help.github.com/en/github/automating-your-workflow-with-github-actions/about-github-actions) workflow for ci at [./.github/workflows/main.yml](./.github/workflows/main.yml). You'll need to [configure secrets](https://help.github.com/en/github/automating-your-workflow-with-github-actions/virtual-environments-for-github-actions#creating-and-using-secrets-encrypted-variables) for `REPLICATED_APP` and `REPLICATED_API_TOKEN`.
-
-### Tools reference
-
-- [replicated vendor cli](https://github.com/replicatedhq/replicated)
-
-### License
-
-MIT
-
+## How Charts were downloaded (TGZ placed in manifest directory)
 helm repo add jetstack https://charts.jetstack.io
 helm repo update
-
-# kubectl kots install helm://jetstack/cert-manager
 helm fetch jetstack/cert-manager
+helm fetch stable/nginx-ingress
 
+## Infra Setup (DNS, Static IP, Cluster Firewall)
+(For some reason, CRDs need to be applied *before* helm chart is installed?)
+kubectl apply --validate=false -f https://raw.githubusercontent.com/jetstack/cert-manager/release-0.13/deploy/manifests/00-crds.yaml
 
+gcloud compute addresses create helloweb-ip --global
+IP_ADDR=$(gcloud compute addresses describe helloweb-ip --global | awk 'NR==1 {print $2}')
+IP_ADDR=gcloud compute addresses describe helloweb-ip --global --format 'value(address)'
+gcloud dns --project=smart-proxy-839 record-sets transaction start --zone=materiography
+gcloud dns --project=smart-proxy-839 record-sets transaction add $IP_ADDR --name=hello2.materiography.com. --ttl=300 --type=A --zone=materiography
+gcloud dns --project=smart-proxy-839 record-sets transaction execute --zone=materiography
+gcloud compute firewall-rules create k8s-cert-manager --source-ranges 172.16.0.0/28 --target-tags gke-austins-cluster-15-844f99b4-node --allow TCP:6443 
+
+## Validating (should show 'Ready' with cert info)
+kubectl get certificate hello2-materiography-com-tls --namespace cert-manager
+kubectl describe certificate hello2-materiography-com-tls --namespace cert-manager
