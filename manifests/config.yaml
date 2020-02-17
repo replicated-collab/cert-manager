@@ -1,8 +1,28 @@
----
-apiVersion: v1
-kind: ConfigMap
+apiVersion: kots.io/v1beta1
+kind: Config
 metadata:
-  name: example-config
-data:
-    ENV_VAR_1: "fake"
-    ENV_VAR_2: "faker"
+  name: cert-manager-config
+spec:
+  groups:
+    - name: config_settings
+      items:
+        - name: domain
+          title: Domain
+          type: text
+          value: 'hello.materiography.com'
+        - name: global_static_ip_name
+          title: Global Static IP Name
+          type: text
+          value: 'sentry-ingress2'
+        - name: managed_cert_name
+          title: Managed Cert Name
+          type: text
+          value: 'hellocert{{repl RandomString 32 | ToLower}}'
+        - name: email_address
+          title: Cert Manager Email
+          type: text
+          value: 'austinc@replicated.com'
+        - name: helloweb_ip
+          title: Helloweb IP Address
+          type: text
+          value: '34.107.229.107'

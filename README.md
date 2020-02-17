@@ -69,3 +69,11 @@ This repo contains a [GitHub Actions](https://help.github.com/en/github/automati
 ### License
 
 MIT
+
+helm repo add jetstack https://charts.jetstack.io
+helm repo update
+
+# kubectl kots install helm://jetstack/cert-manager
+helm fetch jetstack/cert-manager
+
+
